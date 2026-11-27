@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Finance Dashboard - Supabase Sync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    input[type="range"] {
+      accent-color: #38bdf8;
+    }
+    .inline-amount-input {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 6px;
+      padding: 3px 8px;
+      width: 110px;
+      text-align: right;
+      font-weight: 600;
+      color: #fda4af;
+    }
+    .inline-amount-input:focus {
+      outline: none;
+      border-color: #38bdf8;
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 glass-card p-6 rounded-2xl">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-0.5 text-xs font-medium bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/30">Supabase Cloud Sync</span>
+          <span id="syncStatusBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">โหมด Local (ยังไม่ตั้งค่า Supabase)</span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-bold text-white mt-1">แดชบอร์ดบริหารรายรับ-รายจ่าย</h1>
+        <p class="text-slate-400 text-sm mt-0.5">สรุปภาระค่าใช้จ่ายคงที่ วางแผนเงินออม และซิงค์ข้อมูลข้ามอุปกรณ์ผ่าน Supabase</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="bg-slate-800/90 px-4 py-2 rounded-xl border border-slate-700 flex items-center gap-2">
+          <label for="incomeInput" class="text-xs text-slate-400">รายรับ/เดือน:</label>
+          <input id="incomeInput" type="number" step="100" class="w-28 bg-slate-900 text-emerald-400 font-semibold text-right px-2 py-1 rounded border border-slate-700 focus:outline-none focus:border-sky-500" />
+          <span class="text-xs text-slate-400">฿</span>
+        </div>
+        <button onclick="openSupabaseModal()" class="px-3.5 py-2.5 text-xs font-medium bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-xl border border-emerald-500/40 transition">
+          ตั้งค่า Supabase
+        </button>
+        <button onclick="pullFromSupabase()" class="px-3.5 py-2.5 text-xs font-medium bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 rounded-xl border border-sky-500/40 transition">
+          ดึงข้อมูลล่าสุด
+        </button>
+        <button onclick="resetDefaultData()" class="px-3.5 py-2.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
+          รีเซ็ต
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="glass-card p-5 rounded-2xl border-l-4 border-l-emerald-500">
+        <p class="text-xs text-slate-400 font-medium">รายรับทั้งหมด</p>
+        <h2 id="kpiIncome" class="text-2xl font-bold text-emerald-400 mt-1">22,000.00 ฿</h2>
+        <p class="text-xs text-slate-400 mt-2">ฐานคำนวณ 100%</p>
+      </div>
+
+      <div class="glass-card p-5 rounded-2xl border-l-4 border-l-rose-500">
+        <p class="text-xs text-slate-400 font-medium">รายจ่ายคงที่ & บิลทั้งหมด</p>
+        <h2 id="kpiExpense" class="text-2xl font-bold text-rose-400 mt-1">11,862.20 ฿</h2>
+        <p id="kpiExpensePct" class="text-xs text-rose-300/80 mt-2">คิดเป็น 53.9% ของรายรับ</p>
+      </div>
+
+      <div class="glass-card p-5 rounded-2xl border-l
